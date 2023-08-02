@@ -9,8 +9,9 @@
   <p id="location"></p>
   <table id="featureTable">
     <tr>
+      <th>Distance (m)</th>
       <th>Name</th>
-      <th>Class</th>
+      <th>Type</th>
     </tr>
   </table>
 
@@ -43,13 +44,16 @@
           var table = document.getElementById("featureTable");
       
           for (var i = 0; i < features.length; i++) {
-            var name = features[i].properties.name || "";
-            var featureClass = features[i].properties.class || "";
+            var name = features[i].properties.name || features[i].properties.house_num || "";
+            var featureClass = (features[i].properties.layer || "") + '/' + (features[i].properties.tilequery.class || "") + '/' + (features[i].properties.tilequery.category_en || "");
+            var distance = features[i].properties.tilequery.distance || "";
       
             var row = table.insertRow();
             var nameCell = row.insertCell();
             var classCell = row.insertCell();
-      
+            var distanceCell = row.insertCell();
+
+            distanceCell.innerHTML = featureClass;
             nameCell.innerHTML = name;
             classCell.innerHTML = featureClass;
           }
