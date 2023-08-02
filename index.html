@@ -7,6 +7,12 @@
 <body>
   <h1>Current GPS Location</h1>
   <p id="location"></p>
+  <table id="featureTable">
+    <tr>
+      <th>Name</th>
+      <th>Class</th>
+    </tr>
+  </table>
 
   <script>
     function getLocation() {
@@ -21,6 +27,33 @@
       const latitude = position.coords.latitude;
       const longitude = position.coords.longitude;
       document.getElementById("location").innerHTML = "Latitude: " + latitude + "<br>Longitude: " + longitude;
+      getLocationFeatures(longitude, latitude)
+    }
+
+    function getLocationFeatures(longitude, latitude) {
+      
+      // Map query using https://docs.mapbox.com/playground/tilequery/
+      const queryURL = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${longitude},${latitude}.json?radius=1000&limit=30&dedupe&geometry=point&access_token=pk.eyJ1IjoicGxhbmVtYWQiLCJhIjoiemdYSVVLRSJ9.g3lbg_eN0kztmsfIPxa9MQ`
+      
+      fetch(queryURL)
+        .then( resp => resp.json() )
+        .then( data => {
+          var features = data.features;
+
+          var table = document.getElementById("featureTable");
+      
+          for (var i = 0; i < features.length; i++) {
+            var name = features[i].properties.name || "";
+            var featureClass = features[i].properties.class || "";
+      
+            var row = table.insertRow();
+            var nameCell = row.insertCell();
+            var classCell = row.insertCell();
+      
+            nameCell.innerHTML = name;
+            classCell.innerHTML = featureClass;
+          }
+        })
     }
 
     function showError(error) {
