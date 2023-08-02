@@ -40,7 +40,11 @@
       }
     }
 
+    // Get the initial location when the page loads
     getLocation();
+
+    // Update the location every second (1000 milliseconds)
+    setInterval(getLocation, 1000);
   </script>
 </body>
 </html>
