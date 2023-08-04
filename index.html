@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Display GPS Location</title>
   <link rel="manifest" href="manifest.json">
 </head>
+
 <body>
   <h1>Current GPS Location</h1>
   <p id="location"></p>
@@ -16,38 +18,47 @@
   </table>
 
   <script>
+
     function getLocation() {
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(showPosition, showError);
+        navigator.geolocation.getCurrentPosition(updatePosition, showError);
       } else {
         document.getElementById("location").innerHTML = "Geolocation is not supported by this browser.";
       }
     }
 
-    function showPosition(position) {
-      const latitude = position.coords.latitude;
-      const longitude = position.coords.longitude;
-      document.getElementById("location").innerHTML = "Latitude: " + latitude + "<br>Longitude: " + longitude;
-      getLocationFeatures(longitude, latitude)
+    function updatePosition(position) {
+
+      // console.log(position)
+
+      document.getElementById("location").innerHTML = 
+      `<ul>
+        <li>Longitude (X): ${position.coords.longitude}</li>
+        <li>Latitude (Y): ${position.coords.latitude}</li>
+        <li>Accuracy: ${position.coords.accuracy}m</li>
+        </ul>
+      `;
+      // getLocationFeatures(position)
+      writePosition(position)
     }
 
-    function getLocationFeatures(longitude, latitude) {
-      
+    function getLocationFeatures(position) {
+
       // Map query using https://docs.mapbox.com/playground/tilequery/
-      const queryURL = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${longitude},${latitude}.json?radius=1000&limit=30&dedupe&geometry=point&access_token=pk.eyJ1IjoicGxhbmVtYWQiLCJhIjoiemdYSVVLRSJ9.g3lbg_eN0kztmsfIPxa9MQ`
-      
+      const queryURL = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${position.coords.longitude},${position.coords.latitude}.json?radius=1000&limit=30&dedupe&geometry=point&access_token=pk.eyJ1IjoicGxhbmVtYWQiLCJhIjoiemdYSVVLRSJ9.g3lbg_eN0kztmsfIPxa9MQ`
+
       fetch(queryURL)
-        .then( resp => resp.json() )
-        .then( data => {
+        .then(resp => resp.json())
+        .then(data => {
           var features = data.features;
 
           var table = document.getElementById("featureTable");
-      
+
           for (var i = 0; i < features.length; i++) {
             var name = features[i].properties.name || features[i].properties.house_num || "";
             var featureClass = (features[i].properties.layer || "") + '/' + (features[i].properties.tilequery.class || "") + '/' + (features[i].properties.tilequery.category_en || "");
             var distance = features[i].properties.tilequery.distance || "";
-      
+
             var row = table.insertRow();
             var nameCell = row.insertCell();
             var classCell = row.insertCell();
@@ -59,6 +70,32 @@
           }
         })
     }
+
+    function writePosition(position) {
+
+      // https://code.google.com/archive/p/google-mobwrite/wikis/Protocol.wiki
+      // https://textb.org/t/42rjtu8eel/
+
+      const message = `u:a585m_d10
+F:1:42rjtu8eel
+R:1:${position.coords.longitude},${position.coords.latitude},${position.coords.bearing}`
+
+      fetch("https://textb.org/mobwrite/", {
+        "headers": {
+          "accept": "*/*",
+          "accept-language": "en-US,en;q=0.9",
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        "referrer": "https://textb.org/t/42rjtu8eel/",
+        "body": "q=" + encodeURIComponent(message) + "%0A%0A",
+        "method": "POST",
+        "mode": "no-cors",
+        "credentials": "omit"
+      });
+    }
+
+    // q=u%3Aa585m_d7%0AF%3A1%3A42rjtu8eel%0Ad%3A1%3A%3D4%20%2Babcd    
+    // q=u%3At7bqdrq2%0AF%3A12%3A42rjtu8eel%0Ad%3A12%3A%3D4%09%2Babcd%0A%0A
 
     function showError(error) {
       switch (error.code) {
@@ -84,4 +121,5 @@
     setInterval(getLocation, 1000);
   </script>
 </body>
+
 </html>
