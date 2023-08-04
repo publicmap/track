@@ -1,7 +1,7 @@
 {
   "name": "GPS Location Display",
   "short_name": "GPS App",
-  "start_url": "index.html",
+  "start_url": "https://publicmap.github.io/track",
   "display": "standalone",
   "theme_color": "#2196F3",
   "background_color": "#FFFFFF",
@@ -16,5 +16,14 @@
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+  "description": "A simple app to track and share your GPS location",
+  "dir": "auto",
+  "scope": "https://publicmap.github.io/track",
+  "lang": "en",
+  "orientation": "any",
+  "categories": [
+    "travel",
+    "utilities"
   ]
 }
