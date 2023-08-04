@@ -2,22 +2,91 @@
 <html>
 
 <head>
-  <title>Display GPS Location</title>
+  <title>Track GPS Location</title>
   <link rel="manifest" href="manifest.json">
+  <!-- UIkit CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.16.24/dist/css/uikit.min.css" />
+
+  <!-- UIkit JS -->
+  <script src="https://cdn.jsdelivr.net/npm/uikit@3.16.24/dist/js/uikit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/uikit@3.16.24/dist/js/uikit-icons.min.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+  <style>
+    #map {
+      height: 300px;
+      width: 100%;
+    }
+  </style>
 </head>
 
-<body>
-  <h1>Current GPS Location</h1>
-  <p id="location"></p>
-  <table id="featureTable">
+<body class="uk-padding">
+  <h1><input type="checkbox" id="locationCheckbox" onchange="toggleDiv(this, 'location')" checked><label
+      for="locationCheckbox">Track GPS Location <span uk-icon="icon: crosshairs"></span></label></h1>
+  <div id="location">Waiting for device location <div uk-spinner></div>
+  </div>
+  <h2><input type="checkbox" id="featureCheckbox" onchange="toggleDiv(this, 'features')"><label
+      for="featureCheckbox">Features</label>
+  </h2>
+  <table id="features" style="display:none">
     <tr>
       <th>Distance (m)</th>
       <th>Name</th>
       <th>Type</th>
     </tr>
+    <tbody id="featureTable"></tbody>
   </table>
+  <h2><input type="checkbox" id="mapCheckbox" onchange="toggleDiv(this, 'map')"><label for="mapCheckbox">Map</label>
+  </h2>
+  <div id="map" style="display:none"></div>
 
   <script>
+
+    mapboxgl.accessToken = 'pk.eyJ1IjoicGxhbmVtYWQiLCJhIjoiemdYSVVLRSJ9.g3lbg_eN0kztmsfIPxa9MQ';
+    const map = new mapboxgl.Map({
+      container: 'map', // container ID
+      // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
+      style: 'mapbox://styles/mapbox/streets-v12', // style URL
+      zoom: 1,
+      hash: true
+    });
+
+    const geolocate =
+      new mapboxgl.GeolocateControl({
+        positionOptions: {
+          enableHighAccuracy: true
+        },
+        // When active the map will receive updates to the device's location as it changes.
+        trackUserLocation: true,
+        // Draw an arrow next to the location dot to indicate which direction the device is heading.
+        showUserHeading: true
+      })
+    // Add the control to the map.
+    map.addControl(geolocate);
+    geolocate.trigger()
+    map.on('load', () => {
+      geolocate.trigger();
+    })
+
+    function toggleDiv(checkbox, id) {
+
+      console.log(this)
+
+      // Get the div element with the id 'map'
+      const div = document.getElementById(id);
+
+      // Check if the checkbox is checked
+      if (checkbox.checked) {
+        // If checked, show the map div by setting its display property to 'block'
+        div.style.display = 'block';
+      } else {
+        // If not checked, hide the map div by setting its display property to 'none'
+        div.style.display = 'none';
+      }
+      map.resize()
+    }
 
     function getLocation() {
       if (navigator.geolocation) {
@@ -25,46 +94,58 @@
       } else {
         document.getElementById("location").innerHTML = "Geolocation is not supported by this browser.";
       }
+
+
     }
 
     function updatePosition(position) {
 
       // console.log(position)
 
-      document.getElementById("location").innerHTML = 
-      `<ul>
+      document.getElementById("location").innerHTML =
+        `<ul>
         <li>Longitude (X): ${position.coords.longitude}</li>
         <li>Latitude (Y): ${position.coords.latitude}</li>
         <li>Accuracy: ${position.coords.accuracy}m</li>
         </ul>
       `;
-      // getLocationFeatures(position)
+
+      const checkbox = document.getElementById('locationCheckbox');
+      checkbox.checked = true
+      checkbox.onchange()
+
+      getLocationFeatures(position)
       writePosition(position)
     }
 
     function getLocationFeatures(position) {
 
       // Map query using https://docs.mapbox.com/playground/tilequery/
-      const queryURL = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${position.coords.longitude},${position.coords.latitude}.json?radius=1000&limit=30&dedupe&geometry=point&access_token=pk.eyJ1IjoicGxhbmVtYWQiLCJhIjoiemdYSVVLRSJ9.g3lbg_eN0kztmsfIPxa9MQ`
+      const queryURL = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${position.coords.longitude},${position.coords.latitude}.json?radius=1000&limit=50&dedupe=true&geometry=point&access_token=pk.eyJ1IjoicGxhbmVtYWQiLCJhIjoiemdYSVVLRSJ9.g3lbg_eN0kztmsfIPxa9MQ`
 
       fetch(queryURL)
         .then(resp => resp.json())
         .then(data => {
           var features = data.features;
 
+          console.log(data.features)
+
           var table = document.getElementById("featureTable");
+          table.innerHTML = ""
 
           for (var i = 0; i < features.length; i++) {
+            console.log(features[i].properties.name || features[i].properties.house_num || "")
             var name = features[i].properties.name || features[i].properties.house_num || "";
-            var featureClass = (features[i].properties.layer || "") + '/' + (features[i].properties.tilequery.class || "") + '/' + (features[i].properties.tilequery.category_en || "");
+            var featureClass = (features[i].properties.tilequery.layer || "") + '/' + (features[i].properties.class || "") + '/' + (features[i].properties.category_en || "");
             var distance = features[i].properties.tilequery.distance || "";
 
             var row = table.insertRow();
+            var distanceCell = row.insertCell();
             var nameCell = row.insertCell();
             var classCell = row.insertCell();
-            var distanceCell = row.insertCell();
 
-            distanceCell.innerHTML = featureClass;
+
+            distanceCell.innerHTML = parseInt(distance);
             nameCell.innerHTML = name;
             classCell.innerHTML = featureClass;
           }
@@ -119,6 +200,7 @@ R:1:${position.coords.longitude},${position.coords.latitude},${position.coords.b
 
     // Update the location every second (1000 milliseconds)
     setInterval(getLocation, 1000);
+
   </script>
 </body>
 
